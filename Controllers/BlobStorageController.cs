@@ -13,7 +13,8 @@ namespace Api.BlobStorage.Controllers
     [ApiController]
     public class BlobStorageController : ControllerBase
     {
-        [HttpGet(Name = "GetFilesBlobStorage")]
+        [HttpGet()]
+        [Route ("GetFilesBlobStorage")]
         
         public async  Task<List<BlobDto>> GetFiles()
         {
@@ -63,7 +64,8 @@ namespace Api.BlobStorage.Controllers
         }
 
 
-        [HttpPost(Name ="UploadFile")]
+        [HttpPost()]
+        [Route("UploadFile")]
 
         public async Task Upload(IFormFile files)
         {
@@ -89,7 +91,7 @@ namespace Api.BlobStorage.Controllers
                     files.CopyTo(target);
                     dataFiles = target.ToArray();
                 }
-                // This also does not make a service call; it only creates a local object.
+                
                 CloudBlockBlob cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(systemFileName);
                 await cloudBlockBlob.UploadFromByteArrayAsync(dataFiles, 0, dataFiles.Length);
             }
@@ -100,6 +102,117 @@ namespace Api.BlobStorage.Controllers
             }
         }
 
+
+        [HttpPost()]
+        [Route("GetFilesForPrefix/{prefix}")]
+
+        public async Task<List<BlobDto>> GetFilesForPrefix(string prefix)
+        {
+            List<BlobDto> files = new List<BlobDto>();
+            try
+            {
+
+
+                string blobstorageconnection = System.Configuration.ConfigurationManager.ConnectionStrings["BlobStorage"].ConnectionString;
+                CloudStorageAccount cloudStorageAccount = CloudStorageAccount.Parse(blobstorageconnection);
+                CloudBlobClient cloudBlobClient = cloudStorageAccount.CreateCloudBlobClient();
+                string strContainerName = System.Configuration.ConfigurationManager.ConnectionStrings["NameContainer"].ConnectionString;
+                CloudBlobContainer cloudBlobContainer = cloudBlobClient.GetContainerReference(strContainerName);
+
+
+
+                BlobContainerClient container = new BlobContainerClient(blobstorageconnection, strContainerName);
+
+                await foreach (BlobItem file in container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, default))
+                {
+                    string uri = container.Uri.ToString();
+                    var name = file.Name;
+                    var fullUri = $"{uri}/{name}";
+                    files.Add(new BlobDto
+                    {
+                        Uri = fullUri,
+                        Name = name,
+                        ContentType = file.Properties.ContentType
+                    });
+                }
+
+
+
+
+
+            }
+            catch (RequestFailedException ex)
+                when (ex.ErrorCode == BlobErrorCode.BlobNotFound)
+            {
+
+                return null;
+            }
+
+
+            return files;
+
+        }
+
+
+
+        [HttpPost()]
+        [Route("GetFilesForNumber/{number}")]
+        public async Task<List<BlobDto>> GetFilesForNumber(int number)
+        {
+            List<BlobDto> files = new List<BlobDto>();
+            try
+            {
+
+
+                string blobstorageconnection = System.Configuration.ConfigurationManager.ConnectionStrings["BlobStorage"].ConnectionString;
+                CloudStorageAccount cloudStorageAccount = CloudStorageAccount.Parse(blobstorageconnection);
+                CloudBlobClient cloudBlobClient = cloudStorageAccount.CreateCloudBlobClient();
+                string strContainerName = System.Configuration.ConfigurationManager.ConnectionStrings["NameContainer"].ConnectionString;
+                CloudBlobContainer cloudBlobContainer = cloudBlobClient.GetContainerReference(strContainerName);
+
+
+                BlobContinuationToken blobContinuationToken = null;
+                var resultSegment = await cloudBlobContainer.ListBlobsSegmentedAsync(
+                      prefix: null,
+                      useFlatBlobListing: true,
+                      blobListingDetails: BlobListingDetails.None,
+                      maxResults: number,
+                      currentToken: blobContinuationToken,
+                      options: null,
+                      operationContext: null
+                  );
+
+
+
+
+                foreach (IListBlobItem item in resultSegment.Results)
+                {
+                    files.Add(new BlobDto
+                    {
+                        Uri = item.Uri.ToString(),
+
+
+                    });
+                }
+
+
+
+
+
+
+
+            }
+            catch (RequestFailedException ex)
+                when (ex.ErrorCode == BlobErrorCode.BlobNotFound)
+            {
+
+                return null;
+            }
+
+
+            return files;
+
+        }
 
     }
 }
