@@ -63,7 +63,44 @@ namespace Api.BlobStorage.Controllers
         }
 
 
+        [HttpPost(Name ="UploadFile")]
+
+        public async Task Upload(IFormFile files)
+        {
+
+            try
+            {
+                byte[] dataFiles;
+                
+                CloudStorageAccount cloudStorageAccount = CloudStorageAccount.Parse(System.Configuration.ConfigurationManager.ConnectionStrings["BlobStorage"].ConnectionString);
+              
+                CloudBlobClient cloudBlobClient = cloudStorageAccount.CreateCloudBlobClient();
+              
+                CloudBlobContainer cloudBlobContainer = cloudBlobClient.GetContainerReference(System.Configuration.ConfigurationManager.ConnectionStrings["NameContainer"].ConnectionString);
+
+                BlobContainerPermissions permissions = new BlobContainerPermissions
+                {
+                    PublicAccess = BlobContainerPublicAccessType.Blob
+                };
+                string systemFileName = files.FileName;
+                await cloudBlobContainer.SetPermissionsAsync(permissions);
+                await using (var target = new MemoryStream())
+                {
+                    files.CopyTo(target);
+                    dataFiles = target.ToArray();
+                }
+                // This also does not make a service call; it only creates a local object.
+                CloudBlockBlob cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(systemFileName);
+                await cloudBlockBlob.UploadFromByteArrayAsync(dataFiles, 0, dataFiles.Length);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
 
 
     }
 }
+
