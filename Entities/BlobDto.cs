@@ -7,5 +7,7 @@
 
         public string ContentType { get; set; }
 
+        public int NumberVideo { get; set; }
+
     }
 }

@@ -1,4 +1,5 @@
-﻿using Api.BlobStorage.Entities;
+﻿using Api.BlobStorage.BusinessLogic;
+using Api.BlobStorage.Entities;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -13,53 +14,30 @@ namespace Api.BlobStorage.Controllers
     [ApiController]
     public class BlobStorageController : ControllerBase
     {
+
+        private readonly ContainerBL containerBL;
+
+
+        public BlobStorageController()
+        {
+            containerBL = new ContainerBL();
+        }
+
         [HttpGet()]
-        [Route ("GetFilesBlobStorage")]
-        
+        [Route("GetAllFiles")]
+
         public async  Task<List<BlobDto>> GetFiles()
         {
-            List<BlobDto> files;
-            try
-            {
+           return await containerBL.GetAllFiles();
 
+        }
 
-                string blobstorageconnection = System.Configuration.ConfigurationManager.ConnectionStrings["BlobStorage"].ConnectionString;
+        [HttpGet()]
+        [Route("GetVideos")]
 
-                CloudStorageAccount cloudStorageAccount = CloudStorageAccount.Parse(blobstorageconnection);
-                CloudBlobClient cloudBlobClient = cloudStorageAccount.CreateCloudBlobClient();
-                string strContainerName = System.Configuration.ConfigurationManager.ConnectionStrings["NameContainer"].ConnectionString;
-                CloudBlobContainer cloudBlobContainer = cloudBlobClient.GetContainerReference(strContainerName);
-
-
-
-                BlobContainerClient container = new BlobContainerClient(blobstorageconnection, strContainerName);
-                files = new List<BlobDto>();
-                await foreach (BlobItem file in container.GetBlobsAsync())
-                {
-                    string uri = container.Uri.ToString();
-                    var name = file.Name;
-                    var fullUri = $"{uri}/{name}";
-                    files.Add(new BlobDto
-                    {
-                        Uri = fullUri,
-                        Name = name,
-                        ContentType = file.Properties.ContentType
-                    });
-                }
-
-
-
-
-
-            }
-            catch (RequestFailedException ex)
-                when (ex.ErrorCode == BlobErrorCode.BlobNotFound)
-            {
-
-                return null;
-            }
-
-            return files;
+        public async Task<List<BlobDto>> GetVideos()
+        {
+            return await containerBL.GetVideos();
 
         }
 
