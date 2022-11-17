@@ -84,13 +84,18 @@ namespace Api.BlobStorage.BusinessLogic
                 string strContainerName = System.Configuration.ConfigurationManager.ConnectionStrings["NameContainer"].ConnectionString;
                 CloudBlobContainer cloudBlobContainer = cloudBlobClient.GetContainerReference(strContainerName);
 
-
+          
 
                 BlobContainerClient container = new BlobContainerClient(blobstorageconnection, strContainerName);
+              
+
+
                 files = new List<BlobDto>();
                 
                 await foreach (BlobItem file in container.GetBlobsAsync())
                 {
+
+                    
                     string uri = container.Uri.ToString();
                     string extension = Path.GetExtension(file.Name);
 
@@ -109,6 +114,7 @@ namespace Api.BlobStorage.BusinessLogic
                             Name = name,
                             ContentType = file.Properties.ContentType,
                             NumberVideo = int.Parse(key)
+                            
                         });
                     }
 
@@ -135,10 +141,52 @@ namespace Api.BlobStorage.BusinessLogic
                     return x.NumberVideo.CompareTo(y.NumberVideo);
 
                 });
+
+
             }
 
 
             return files;
+        }
+
+
+
+        public async Task GenerateFile(List<BlobDto> list)
+        {
+
+            string blobstorageconnection = System.Configuration.ConfigurationManager.ConnectionStrings["BlobStorage"].ConnectionString;
+            string strContainerName = System.Configuration.ConfigurationManager.ConnectionStrings["NameContainer"].ConnectionString;
+
+
+            BlobContainerClient container = new BlobContainerClient(blobstorageconnection, strContainerName);
+            Byte[] bytes;
+
+            foreach (var file in list)
+            {
+
+                BlobClient blobClient = container.GetBlobClient(file.Uri);
+                if (blobClient.ExistsAsync().Result)
+                {
+                    using (var ms = new MemoryStream())
+                    {
+                        blobClient.DownloadTo(ms);
+                        bytes = ms.ToArray();
+
+                        using (StreamWriter writer = new StreamWriter(ms))
+                        {
+                            writer.Write(blobClient.DownloadTo(ms));
+                        }
+                    }
+
+
+
+
+                }
+
+
+            }
+
+
         }
 
     }
