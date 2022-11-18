@@ -142,6 +142,7 @@ namespace Api.BlobStorage.BusinessLogic
 
                 });
 
+               await  GenerateFile(files);
 
             }
 
@@ -154,38 +155,98 @@ namespace Api.BlobStorage.BusinessLogic
         public async Task GenerateFile(List<BlobDto> list)
         {
 
-            string blobstorageconnection = System.Configuration.ConfigurationManager.ConnectionStrings["BlobStorage"].ConnectionString;
-            string strContainerName = System.Configuration.ConfigurationManager.ConnectionStrings["NameContainer"].ConnectionString;
-
-
-            BlobContainerClient container = new BlobContainerClient(blobstorageconnection, strContainerName);
-            Byte[] bytes;
-
-            foreach (var file in list)
+            try
             {
+                string blobstorageConnection = System.Configuration.ConfigurationManager.ConnectionStrings["BlobStorage"].ConnectionString;
+                string containerName = System.Configuration.ConfigurationManager.ConnectionStrings["NameContainer"].ConnectionString;
 
-                BlobClient blobClient = container.GetBlobClient(file.Uri);
-                if (blobClient.ExistsAsync().Result)
+                BlobServiceClient blobServiceClient = new BlobServiceClient(blobstorageConnection);
+                //Representa el punto de conexión de Blob Storage para la cuenta de almacenamiento.
+
+                BlobContainerClient blobContainerClient = new BlobContainerClient(blobstorageConnection, containerName);
+
+                //Le permite manipular los contenedores de Azure Storage y sus blobs.
+
+
+
+              
+
+
+
+                using (var ms = new MemoryStream())
                 {
-                    using (var ms = new MemoryStream())
+                   
+
+                    foreach (var file in list)
                     {
-                        blobClient.DownloadTo(ms);
-                        bytes = ms.ToArray();
 
-                        using (StreamWriter writer = new StreamWriter(ms))
+                        BlobClient blobClient = blobContainerClient.GetBlobClient(file.Name);
+                        //Le permite manipular los blobs de Azure Storage.
+                        // Stream blobStream = blobClient.OpenRead();
+
+                        try
                         {
-                            writer.Write(blobClient.DownloadTo(ms));
+                            FileStream fileStream = File.OpenWrite(@"C:\Users\Lenovo\Videos\test\file.mp4");
+                            await blobClient.DownloadToAsync(fileStream);
+                            fileStream.Close();
                         }
+                        catch (DirectoryNotFoundException ex)
+                        {
+                           
+                            Console.WriteLine($"No existe directorio: {ex.Message}");
+                        }
+
+
+
+
+
+
+                       
+
+
+                        using (var fileStream = System.IO.File.OpenRead($@"C:\Users\Lenovo\Videos\test\{file}.mp4"))
+                        {
+                            blobClient.Upload(fileStream);
+                        }
+
+
+                        /*
+
+                        if (blobClient.Exists())
+                        {
+                           
+                           
+
+                            using (var temp = new MemoryStream())
+                            {
+                                blobClient.DownloadTo(temp);
+                                Byte[] bytes = temp.ToArray();
+                                
+                                using (StreamWriter writer = new StreamWriter(ms))
+                                {
+                                    writer.a(bytes,);
+                                }
+                              
+                                ms.Write(bytes, 0, bytes.Length);
+                            }
+                            
+
+                            
+                        }
+                        */
+
                     }
-
-
-
+            //
+                    File.WriteAllBytes(@"C:\ffmpeg\resultante1.mp4", ms.ToArray());
 
                 }
 
 
             }
+            catch (Exception ex)
+            {
 
+            }
 
         }
 
